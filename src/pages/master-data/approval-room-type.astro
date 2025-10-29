@@ -1,0 +1,150 @@
+---
+import AppLayout from "@layouts/AppLayout.astro";
+import Card from "@components/ui/Card.astro";
+import { sampleRoomTypes, statusBadge, type RoomType } from "@data/room-type";
+
+const rows = sampleRoomTypes.filter((r) => r.status === "waiting for approval");
+---
+<AppLayout title="Approval Room Type">
+  <Card title="Approval Room Type" description="Review dan proses persetujuan Room Type" class="space-y-4">
+    <div class="flex items-center justify-between gap-3">
+      <input
+        type="text"
+        placeholder="Search room type..."
+        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:max-w-xs"
+        data-search
+      />
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-slate-100">
+      <table class="min-w-full divide-y divide-slate-200 text-sm" data-table>
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-widest text-slate-500">
+          <tr>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Description</th>
+            <th class="px-4 py-3">Facilities</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white text-slate-600" data-tbody>
+          {rows.map((rt) => (
+            <tr data-row data-text={`${rt.name} ${rt.description} ${rt.facilities} ${rt.status}`}>
+              <td class="px-4 py-3 font-medium text-slate-900">{rt.name}</td>
+              <td class="px-4 py-3">{rt.description}</td>
+              <td class="px-4 py-3">{rt.facilities}</td>
+              <td class="px-4 py-3">
+                <span class={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-widest ${statusBadge(rt.status)}`}>
+                  {rt.status}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold hover:border-brand-500 hover:text-brand-600" data-approve data-id={rt.id}>Approval</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-900/40 p-4" data-modal>
+      <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-4 shadow-xl flex max-h-[80vh] flex-col">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-slate-900" data-modal-title>Approval Detail</h3>
+          <button class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100" data-modal-close>✕</button>
+        </div>
+        <div class="mt-3 space-y-2 text-sm text-slate-600 flex-1 overflow-auto" data-modal-body></div>
+        <div class="mt-3">
+          <label class="block text-xs font-semibold uppercase tracking-widest text-slate-500">
+            Revision Note
+            <textarea class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" rows="3" placeholder="Tuliskan catatan revisi..." data-revision-note></textarea>
+          </label>
+        </div>
+        <div class="mt-4 flex justify-end gap-3 border-t border-slate-100 pt-3 bg-white">
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" data-revise>Revise</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" data-reject>Reject</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700" data-approve-confirm>Approve</button>
+        </div>
+      </div>
+    </div>
+  </Card>
+
+  <script>
+    const root = document.currentScript?.closest('section')?.parentElement ?? document;
+    const tbody = root.querySelector('[data-tbody]');
+    const search = root.querySelector('[data-search]');
+
+    const modal = root.querySelector('[data-modal]');
+    const modalTitle = root.querySelector('[data-modal-title]');
+    const modalBody = root.querySelector('[data-modal-body]');
+    const modalClose = root.querySelector('[data-modal-close]');
+    const revisionNote = root.querySelector('[data-revision-note]');
+
+    let currentRow = null;
+
+    const openModal = () => modal && modal.classList.remove('hidden');
+    const closeModal = () => { modal && modal.classList.add('hidden'); currentRow = null; };
+
+    search?.addEventListener('input', () => {
+      const q = search.value.toLowerCase();
+      tbody?.querySelectorAll('[data-row]').forEach((tr) => {
+        const hay = tr.getAttribute('data-text')?.toLowerCase() ?? '';
+        tr.classList.toggle('hidden', !hay.includes(q));
+      });
+    });
+
+    tbody?.querySelectorAll('[data-approve]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentRow = btn.closest('[data-row]');
+        if (!currentRow) return;
+        const tds = currentRow.querySelectorAll('td');
+        if (modalTitle) modalTitle.textContent = 'Approval Room Type';
+        if (modalBody) {
+          modalBody.innerHTML = `
+            <div><span class="font-semibold text-slate-900">Name:</span> ${tds[0].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Description:</span> ${tds[1].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Facilities:</span> ${tds[2].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Status:</span> ${tds[3].textContent}</div>
+          `;
+        }
+        if (revisionNote) revisionNote.value = '';
+        openModal();
+      });
+    });
+
+    const removeIfProcessed = () => { if (currentRow) currentRow.classList.add('hidden'); };
+
+    root.querySelector('[data-revise]')?.addEventListener('click', () => {
+      if (!currentRow) return;
+      const note = revisionNote?.value?.trim() ?? '';
+      currentRow.querySelector('td:nth-child(4) span')?.classList.remove('bg-blue-100','text-blue-700');
+      currentRow.querySelector('td:nth-child(4) span')?.classList.add('bg-amber-100','text-amber-700');
+      currentRow.querySelector('td:nth-child(4) span').textContent = 'revise';
+      closeModal();
+      removeIfProcessed();
+    });
+
+    root.querySelector('[data-reject]')?.addEventListener('click', () => {
+      if (!currentRow) return;
+      const note = revisionNote?.value?.trim() ?? '';
+      currentRow.querySelector('td:nth-child(4) span')?.classList.remove('bg-blue-100','text-blue-700');
+      currentRow.querySelector('td:nth-child(4) span')?.classList.add('bg-red-100','text-red-700');
+      currentRow.querySelector('td:nth-child(4) span').textContent = 'rejected';
+      closeModal();
+      removeIfProcessed();
+    });
+
+    root.querySelector('[data-approve-confirm]')?.addEventListener('click', () => {
+      if (!currentRow) return;
+      const note = revisionNote?.value?.trim() ?? '';
+      currentRow.querySelector('td:nth-child(4) span')?.classList.remove('bg-blue-100','text-blue-700');
+      currentRow.querySelector('td:nth-child(4) span')?.classList.add('bg-green-100','text-green-700');
+      currentRow.querySelector('td:nth-child(4) span').textContent = 'approved';
+      closeModal();
+      removeIfProcessed();
+    });
+
+    modalClose?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  </script>
+</AppLayout>

@@ -35,7 +35,7 @@ const { hotelName, userName, activeRoleCode, activeRoleName, roleOptions } = Ast
         </span>
       </button>
       <div
-        class="absolute right-0 mt-2 hidden w-64 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-xl"
+        class="absolute right-0 mt-2 hidden w-64 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-xl z-50"
         data-role-menu
       >
         <p class="px-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
@@ -84,8 +84,9 @@ const { hotelName, userName, activeRoleCode, activeRoleName, roleOptions } = Ast
 </header>
 
 <script>
-  const header = document.currentScript?.previousElementSibling;
-  const switcher = header?.querySelector('[data-role-switcher]');
+  // Use a robust lookup so this works even if scripts are module-scoped
+  // and document.currentScript is unavailable.
+  const switcher = document.querySelector('[data-role-switcher]');
   if (switcher instanceof HTMLElement) {
     const trigger = switcher.querySelector('[data-role-trigger]');
     const menu = switcher.querySelector('[data-role-menu]');

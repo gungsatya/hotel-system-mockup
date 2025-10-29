@@ -58,7 +58,7 @@ const { items, activeHref, activeRole } = Astro.props;
                 const itemVisible = item.role.includes(activeRole);
                 const isActive = activeHref === item.href;
                 const itemClasses = [
-                  "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-600",
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-600",
                   isActive
                     ? "bg-brand-100 text-brand-700 shadow-inner"
                     : "text-slate-600"
@@ -76,9 +76,7 @@ const { items, activeHref, activeRole } = Astro.props;
                       class={itemClasses}
                     >
                       <span>{item.name}</span>
-                      <span class="rounded-full bg-slate-100 px-2 text-[11px] font-semibold text-slate-500">
-                        {item.role.join(", ")}
-                      </span>
+                      
                     </a>
                   </li>
                 );
@@ -100,8 +98,9 @@ const { items, activeHref, activeRole } = Astro.props;
 </aside>
 
 <script>
-  const sidebar = document.currentScript?.previousElementSibling;
-  const sidebarRoot = sidebar instanceof HTMLElement ? sidebar : null;
+  // Use a robust selector instead of document.currentScript to avoid
+  // initialization issues across different bundling modes.
+  const sidebarRoot = document.querySelector('[data-sidebar]');
   if (sidebarRoot) {
     const updateVisibility = (roleCode) => {
       const elements = sidebarRoot.querySelectorAll('[data-nav-role]');
