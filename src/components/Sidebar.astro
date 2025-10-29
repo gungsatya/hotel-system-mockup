@@ -1,14 +1,19 @@
 ---
-import type { NavigationGroup } from "@data/navigation";
+import type { NavigationGroup, RoleCode } from "@data/navigation";
 
 interface Props {
   items: NavigationGroup[];
   activeHref: string;
+  activeRole: RoleCode;
 }
 
-const { items, activeHref } = Astro.props;
+const { items, activeHref, activeRole } = Astro.props;
 ---
-<aside class="hidden w-72 border-r border-slate-200 bg-white px-4 py-6 shadow-sm md:block">
+<aside
+  class="hidden w-72 border-r border-slate-200 bg-white px-4 py-6 shadow-sm md:block"
+  data-sidebar
+  data-active-role={activeRole}
+>
   <div class="flex items-center gap-3 px-2">
     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-500 text-white font-semibold">
       RS
@@ -20,47 +25,107 @@ const { items, activeHref } = Astro.props;
   </div>
 
   <nav class="mt-8 space-y-4">
-    {items.map((group) => (
-      <section class="space-y-2" data-group={group.name}>
-        <p class="px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          {group.name}
-        </p>
-        {group.children ? (
-          <ul class="space-y-1">
-            {group.children.map((item) => {
-              const isActive = activeHref === item.href;
-              return (
-                <li>
-                  <a
-                    href={item.href}
-                    class={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-600 ${
-                      isActive
-                        ? "bg-brand-100 text-brand-700 shadow-inner"
-                        : "text-slate-600"
-                    }`}
-                  >
-                    <span>{item.name}</span>
-                    <span class="rounded-full bg-slate-100 px-2 text-[11px] font-semibold text-slate-500">
-                      {item.role.join(", ")}
-                    </span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <a
-            href={group.href ?? "/"}
-            class={`mt-1 block rounded-lg px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-600 ${
-              activeHref === (group.href ?? "/")
-                ? "bg-brand-100 text-brand-700 shadow-inner"
-                : "text-slate-600"
-            }`}
-          >
+    {items.map((group) => {
+      const groupRoles = group.role.join(",");
+      const groupVisible = group.role.includes(activeRole);
+      const sectionClasses = [
+        "space-y-2",
+        groupVisible ? "" : "hidden"
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const groupLinkActive = activeHref === (group.href ?? "/");
+      const linkClasses = [
+        "mt-1 block rounded-lg px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-600",
+        groupLinkActive ? "bg-brand-100 text-brand-700 shadow-inner" : "text-slate-600"
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return (
+        <section
+          class={sectionClasses}
+          data-group={group.name}
+          data-nav-role={groupRoles}
+        >
+          <p class="px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
             {group.name}
-          </a>
-        )}
-      </section>
-    ))}
+          </p>
+          {group.children ? (
+            <ul class="space-y-1">
+              {group.children.map((item) => {
+                const itemRoles = item.role.join(",");
+                const itemVisible = item.role.includes(activeRole);
+                const isActive = activeHref === item.href;
+                const itemClasses = [
+                  "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-brand-50 hover:text-brand-600",
+                  isActive
+                    ? "bg-brand-100 text-brand-700 shadow-inner"
+                    : "text-slate-600"
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+
+                return (
+                  <li
+                    class={itemVisible ? "" : "hidden"}
+                    data-nav-role={itemRoles}
+                  >
+                    <a
+                      href={item.href}
+                      class={itemClasses}
+                    >
+                      <span>{item.name}</span>
+                      <span class="rounded-full bg-slate-100 px-2 text-[11px] font-semibold text-slate-500">
+                        {item.role.join(", ")}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <a
+              href={group.href ?? "/"}
+              class={linkClasses}
+              data-nav-role={groupRoles}
+            >
+              {group.name}
+            </a>
+          )}
+        </section>
+      );
+    })}
   </nav>
 </aside>
+
+<script>
+  const sidebar = document.currentScript?.previousElementSibling;
+  const sidebarRoot = sidebar instanceof HTMLElement ? sidebar : null;
+  if (sidebarRoot) {
+    const updateVisibility = (roleCode) => {
+      const elements = sidebarRoot.querySelectorAll('[data-nav-role]');
+      elements.forEach((el) => {
+        const roles = el.getAttribute('data-nav-role')?.split(',').map((role) => role.trim()) ?? [];
+        if (roles.includes(roleCode)) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    };
+
+    window.addEventListener('app:role-change', (event) => {
+      const detail = event.detail;
+      if (detail?.code) {
+        updateVisibility(detail.code);
+        sidebarRoot.setAttribute('data-active-role', detail.code);
+      }
+    });
+
+    const initialRole = sidebarRoot.getAttribute('data-active-role');
+    if (initialRole) {
+      updateVisibility(initialRole);
+    }
+  }
+</script>

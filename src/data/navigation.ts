@@ -103,6 +103,19 @@ export const navigation: NavigationGroup[] = [
   }
 ];
 
+export interface RoleOption {
+  code: RoleCode;
+  name: string;
+}
+
+export const roleOptions: RoleOption[] = [
+  { code: "S-ADM", name: "Super Administrator" },
+  { code: "ADM", name: "Administrator" },
+  { code: "S", name: "Staff" },
+  { code: "ACC", name: "Accountant" },
+  { code: "M", name: "Manager" }
+];
+
 export const hotelInfo = {
   name: "Rama Shinta Hotel",
   location: "Candidasa, Bali"
@@ -110,6 +123,6 @@ export const hotelInfo = {
 
 export const activeUser = {
   name: "Made Wijaya",
-  role: "Front Office",
-  code: "S-ADM" as RoleCode
+  activeRole: "S-ADM" as RoleCode,
+  availableRoles: roleOptions.map((role) => role.code)
 };
