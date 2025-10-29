@@ -1,0 +1,376 @@
+---
+import AppLayout from "@layouts/AppLayout.astro";
+import Card from "@components/ui/Card.astro";
+import { roomTypeNameMap } from "@data/room-rate";
+import { sampleRoomRates } from "@data/room-rate";
+import { sampleRoomTypes, statusBadge } from "@data/room-type";
+
+const rows = sampleRoomRates;
+const roomTypes = sampleRoomTypes;
+
+// helper to safely serialize data into inline <script>
+function serialize(data) {
+  // This prevents breaking out of the script tag by escaping </script>
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}
+---
+
+<AppLayout title="Maintain Room Rate">
+  <Card title="Maintain Room Rate" description="Kelola data Room Rate" class="relative space-y-4">
+    <button
+      type="button"
+      class="sm:absolute sm:right-6 sm:top-6 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:border-brand-500 hover:text-brand-600"
+      data-add
+    >
+      Add Room Rate
+    </button>
+    <div class="flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:justify-between">
+      <input
+        type="text"
+        placeholder="Search room rate..."
+        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:max-w-xs"
+        data-search
+      />
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-slate-100">
+      <table class="min-w-full divide-y divide-slate-200 text-sm" data-table>
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-widest text-slate-500">
+          <tr>
+            <th class="px-4 py-3">Room Type</th>
+            <th class="px-4 py-3">Name</th>
+            <th class="px-4 py-3">Amount</th>
+            <th class="px-4 py-3">Default</th>
+            <th class="px-4 py-3">Start Date</th>
+            <th class="px-4 py-3">End Date</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 bg-white text-slate-600" data-tbody>
+          {rows.map((rr) => {
+            const canEdit = rr.status === "revise" || rr.status === "approved";
+            const rtName = roomTypeNameMap.get(rr.roomTypeId) ?? rr.roomTypeId;
+            return (
+              <tr
+                data-row
+                data-text={`${rtName} ${rr.name} ${rr.amount} ${rr.isDefault ? "default" : ""} ${rr.startDate} ${rr.endDate} ${rr.status}`}
+              >
+                <td class="px-4 py-3 font-medium text-slate-900">{rtName}</td>
+                <td class="px-4 py-3">{rr.name}</td>
+                <td class="px-4 py-3">{rr.amount}</td>
+                <td class="px-4 py-3">{rr.isDefault ? "Yes" : "No"}</td>
+                <td class="px-4 py-3">{rr.startDate}</td>
+                <td class="px-4 py-3">{rr.endDate}</td>
+                <td class="px-4 py-3">
+                  <span
+                    class={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-widest ${statusBadge(rr.status)}`}
+                  >
+                    {rr.status}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold hover:border-brand-500 hover:text-brand-600"
+                      data-view
+                      data-id={rr.id}
+                    >
+                      View
+                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold hover:border-brand-500 hover:text-brand-600"
+                        data-edit
+                        data-id={rr.id}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-slate-900/40 p-4"
+      data-modal
+    >
+      <div
+        class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-xl"
+      >
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-slate-900" data-modal-title>Room Rate</h3>
+          <button
+            class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100"
+            data-modal-close
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          class="mt-3 flex-1 overflow-auto space-y-3 text-sm text-slate-600"
+          data-modal-body
+        ></div>
+        <div
+          class="mt-4 flex justify-end gap-2 border-t border-slate-100 bg-white pt-3"
+          data-modal-actions
+        >
+          <button
+            class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:border-brand-500 hover:text-brand-600"
+            data-modal-cancel
+          >
+            Close
+          </button>
+          <button
+            class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:border-brand-500 hover:text-brand-600"
+            data-modal-save
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+    {/* 1. Inject the data so browser JS can use it */}
+    <input type="hidden" id="roomTypes-data" value={serialize(roomTypes)}/>
+    <input type="hidden" id="rows-data" value={serialize(rows)}/>
+  </Card>
+
+  
+
+  {/* 2. Main interactive script (browser-side) */}
+  <script>
+    // read serialized data back into JS
+    const roomTypes = JSON.parse(
+      document.getElementById('roomTypes-data')?.value ?? "[]"
+    );
+    const rows = JSON.parse(
+      document.getElementById('rows-data')?.value ?? "[]"
+    );
+
+    const root = document;
+    const tbody = root.querySelector('[data-tbody]');
+    const search = root.querySelector('[data-search]');
+
+    const modal = root.querySelector('[data-modal]');
+    const modalTitle = root.querySelector('[data-modal-title]');
+    const modalBody = root.querySelector('[data-modal-body]');
+    const modalSave = root.querySelector('[data-modal-save]');
+    const modalClose = root.querySelector('[data-modal-close]');
+    const modalCancel = root.querySelector('[data-modal-cancel]');
+
+    let modalMode = 'view';
+    const setMode = (mode) => {
+      modalMode = mode;
+      if (modalSave) modalSave.classList.toggle('hidden', mode !== 'edit');
+    };
+
+    const openModal = () => modal && modal.classList.remove('hidden');
+    const closeModal = () => {
+      if (modal) modal.classList.add('hidden');
+      setMode('view');
+    };
+
+    search?.addEventListener('input', () => {
+      const q = search.value.toLowerCase();
+      tbody?.querySelectorAll('[data-row]').forEach((tr) => {
+        const hay = tr.getAttribute('data-text')?.toLowerCase() ?? '';
+        tr.classList.toggle('hidden', !hay.includes(q));
+      });
+    });
+
+    // Event delegation for View/Edit
+    tbody?.addEventListener('click', (e) => {
+      const editBtn = e.target instanceof Element ? e.target.closest('[data-edit]') : null;
+      const viewBtn = e.target instanceof Element ? e.target.closest('[data-view]') : null;
+      const btn = editBtn || viewBtn;
+      if (!btn) return;
+
+      const row = btn.closest('[data-row]');
+      if (!row) return;
+
+      const tds = row.querySelectorAll('td');
+      if (editBtn) {
+        if (modalTitle) modalTitle.textContent = `Edit Room Rate`;
+        if (modalBody) {
+          const currentRt = tds[0].textContent?.trim() ?? '';
+          const currentName = tds[1].textContent?.trim() ?? '';
+          const currentAmount = tds[2].textContent?.trim() ?? '';
+          const isDefault = (tds[3].textContent?.trim() ?? '') === 'Yes';
+          const startDate = tds[4].textContent?.trim() ?? '';
+          const endDate = tds[5].textContent?.trim() ?? '';
+
+          modalBody.innerHTML = `
+            <div class="space-y-3">
+              <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Room Type</span>
+                <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  ${roomTypes
+                    .map(
+                      (rt) =>
+                        `<option ${rt.name === currentRt ? 'selected' : ''}>${rt.name}</option>`
+                    )
+                    .join('')}
+                </select>
+              </label>
+
+              <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Name</span>
+                <input
+                  type="text"
+                  class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value="${currentName}"
+                >
+              </label>
+
+              <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Amount</span>
+                <input
+                  type="number"
+                  class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value="${currentAmount}"
+                  min="0"
+                  step="1000"
+                >
+              </label>
+
+              <div class="flex items-center gap-2">
+                <input
+                  id="isDefault"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300"
+                  ${isDefault ? 'checked' : ''}
+                />
+                <label for="isDefault" class="text-sm text-slate-700">Default</label>
+              </div>
+
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label class="block">
+                  <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Start Date</span>
+                  <input
+                    type="date"
+                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    value="${startDate}"
+                  >
+                </label>
+
+                <label class="block">
+                  <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">End Date</span>
+                  <input
+                    type="date"
+                    class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    value="${endDate}"
+                  >
+                </label>
+              </div>
+            </div>
+          `;
+        }
+        setMode('edit');
+        openModal();
+      } else if (viewBtn) {
+        if (modalTitle) modalTitle.textContent = `View Room Rate`;
+        if (modalBody) {
+          modalBody.innerHTML = `
+            <div><span class="font-semibold text-slate-900">Room Type:</span> ${tds[0].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Name:</span> ${tds[1].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Amount:</span> ${tds[2].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Default:</span> ${tds[3].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Start Date:</span> ${tds[4].textContent}</div>
+            <div><span class="font-semibold text-slate-900">End Date:</span> ${tds[5].textContent}</div>
+            <div><span class="font-semibold text-slate-900">Status:</span> ${tds[6].textContent}</div>
+          `;
+        }
+        setMode('view');
+        openModal();
+      }
+    });
+
+    // Add button
+    document.addEventListener('click', (e) => {
+      const addBtn = e.target instanceof Element ? e.target.closest('[data-add]') : null;
+      if (!addBtn) return;
+
+      if (modalTitle) modalTitle.textContent = `Add Room Rate`;
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <div class="space-y-3">
+            <label class="block">
+              <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Room Type</span>
+              <select class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                ${roomTypes.map((rt) => `<option>${rt.name}</option>`).join('')}
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Name</span>
+              <input
+                type="text"
+                class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                placeholder="e.g. Deluxe Flex"
+              >
+            </label>
+
+            <label class="block">
+              <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Amount</span>
+              <input
+                type="number"
+                class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                placeholder="e.g. 750000"
+                min="0"
+                step="1000"
+              >
+            </label>
+
+            <div class="flex items-center gap-2">
+              <input
+                id="isDefaultAdd"
+                type="checkbox"
+                class="h-4 w-4 rounded border-slate-300"
+              />
+              <label for="isDefaultAdd" class="text-sm text-slate-700">Default</label>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">Start Date</span>
+                <input
+                  type="date"
+                  class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+              </label>
+
+              <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-widest text-slate-500">End Date</span>
+                <input
+                  type="date"
+                  class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                >
+              </label>
+            </div>
+          </div>
+        `;
+      }
+
+      setMode('edit');
+      openModal();
+    });
+
+    modalClose?.addEventListener('click', closeModal);
+    modalCancel?.addEventListener('click', closeModal);
+    modalSave?.addEventListener('click', () => {
+      // here is where you'd collect form data and send to API later
+      closeModal();
+    });
+
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+  </script>
+</AppLayout>
